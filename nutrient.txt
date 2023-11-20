@@ -1,0 +1,27 @@
+Water 
+Protein 
+Total lipid (fat) 
+Carbohydrate, by difference 
+Calcium, Ca 
+Iron, Fe 
+Magnesium, Mg 
+Phosphorus, P 
+Potassium, K 
+Sodium, Na 
+Zinc, Zn 
+Copper, Cu 
+Manganese, Mn 
+Selenium, Se 
+Vitamin C, total ascorbic acid 
+Thiamin 
+Riboflavin 
+Niacin 
+Pantothenic acid 
+Vitamin B-6 
+Folate, total 
+Vitamin B-12 
+Vitamin A, RAE 
+Cholesterol 
+Fatty acids, total saturated 
+Fatty acids, total monounsaturated 
+Fatty acids, total polyunsaturated
