@@ -1,0 +1,13 @@
+Calcium, Ca
+Iron, Fe
+Magnesium, Mg
+Phosphorus, P
+Potassium, K
+Sodium, Na
+Zinc, Zn
+Vitamin C, total ascorbic acid
+Thiamin
+Riboflavin
+Niacin
+Vitamin B-6
+Vitamin A, RAE

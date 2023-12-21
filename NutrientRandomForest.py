@@ -17,10 +17,17 @@ from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import ReduceLROnPlateau
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
+from sklearn.inspection import permutation_importance
+from keras.models import Model
+import tensorflow as tf
+import numpy as np
+import cv2
 # load data from FoodNutrients directory to a numpy array
 
-nutrients = open("nutrient.txt", "r").readlines()
+nutrients = open("FoodNutrients/nutrient.txt", "r").readlines()
 nutrients = [x.strip() for x in nutrients]
+predictNutrients = open("FoodNutrients/predictNutrient.txt", "r").readlines()
+predictNutrients = [x.strip() for x in predictNutrients]
 def todf(filename):
     data = open("FoodNutrients/"+filename, "r").readlines()
     data = [list(map(float, x.split())) for x in data]
@@ -168,27 +175,63 @@ def trainCNN(train, test, label):
                             epochs=epochs, validation_data=(x_val,y_val),
                             verbose=2, steps_per_epoch=x_train.shape[0]//batch_size,
                             callbacks=[learning_rate_reduction])
-    return model, y_true, test
+    return model, y_true, test, history, x_train
 
 def toSpreadSheet(raw, cooked, name):
-    data = []
-    for label in nutrients:
+    preds = pd.DataFrame()
+    true = pd.DataFrame()
+    for label in predictNutrients:
         model = trainCNN(todf(raw+ ".txt"), todf(cooked + ".txt"), label)
         y_true = model[1]
         test = model[2]
         y_pred = model[0].predict(test)
-        MSE = mean_squared_error(y_true, y_pred)
-        MAE = mean_absolute_error(y_true, y_pred)
-        R2 = r2_score(y_true, y_pred)
-        RMSE = MSE ** 0.5
-        SPC = stats.spearmanr(y_true, y_pred)[0]
-        data.append([label, MSE, MAE, R2, RMSE, SPC])
-    data = pd.DataFrame(data, columns=["Nutrient", "MSE", "MAE", "R2", "RMSE", "SPC"])
-    data.to_csv("Evaluations/"+ name + "CNN.csv", index=False)  
+        y_pred = pd.DataFrame(y_pred, columns=[label])
+        preds = pd.concat([preds, y_pred], axis=1)
+        y_true = pd.DataFrame(y_true, columns=[label])
+        true = pd.concat([true, y_true], axis=1)
+        
+        img = model[4]
+        CAM(img, model[0], name, label)
+        
+        model[0].save("CNNmodels/"+ name + label + ".h5")
+        history = model[3]
+        history = pd.DataFrame(history.history)
+        history.to_csv("History/"+ name + label + ".csv", index=False)
+    preds.to_csv("CNNpredictions/"+ name + "Predictions.csv", index=False)
+    true.to_csv("CNNpredictions/"+ name + "True.csv", index=False)
 
-#toSpreadSheet("rawFoodDryNutri", "cookedFoodDryNutri", "dryFood")
-toSpreadSheet("rawFoodWetNutri", "cookedFoodWetNutri", "wetFood")
+def CAM(img, model, name, label):
+    last_conv_layer = model.layers[1]  
+    classifier_layer = model.layers[-1]  
     
+    cam_model = Model(inputs=model.inputs, outputs=[last_conv_layer.output, classifier_layer.output])
+
+    features, results = cam_model.predict(img)
+
+    cam = np.zeros(dtype=np.float32, shape=features.shape[1:3])
+    for i, w in enumerate(results[0]):
+        cam += w * features[0, :, :, i]
+
+    cam = cv2.resize(cam, (img.shape[1], img.shape[2]))
+
+    cam /= np.max(cam)
+    
+    cam = pd.DataFrame(cam)
+    cam.to_csv("CNNimportance/"+ name + label + ".csv", index=False)
+toSpreadSheet("rawFoodDryNutri", "cookedFoodDryNutri", "dryFood")
+# toSpreadSheet("rawFoodWetNutri", "cookedFoodWetNutri", "wetFood")
+# feature ranking of my CNN model
+# from sklearn.inspection import permutation_importance
+# # perform permutation importance
+# results = permutation_importance(model, test, y_true, scoring='neg_mean_squared_error')
+# # get importance
+# importance = results.importances_mean
+# # summarize feature importance
+# for i,v in enumerate(importance):
+#     print('Feature: %0d, Score: %.5f' % (i,v))
+# # plot feature importance
+# plt.bar([x for x in range(len(importance))], importance)
+# plt.show()
 
 # split data into train and test sets
 # X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(X, y, test_size=0.33, random_state=42)
